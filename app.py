@@ -17,7 +17,9 @@ st.markdown("""
     
     /* إخفاء علامة Streamlit البرتقالية من أسفل الموقع */
     footer {visibility: hidden;}
-    
+    /* إخفاء الأزرار العائمة الخاصة بـ Streamlit من الأسفل والأعلى */
+    [data-testid="stToolbar"] {display: none !important;}
+    [data-testid="stAppDeployButton"] {display: none !important;}
     /* إخفاء الفراغ الأبيض الزائد من الأعلى بعد إخفاء القائمة */
     .block-container {padding-top: 2rem;}
 
