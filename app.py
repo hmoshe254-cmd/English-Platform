@@ -8,12 +8,20 @@ import json
 st.set_page_config(page_title="تعلم الإنجليزية بطلاقة", page_icon="🎓", layout="centered")
 
 # ==========================================
-# 2. قسم التصميم والأناقة (CSS)
+# 2. قسم التصميم (إخفاء أيقونات القطة والعلامات المائية)
 # ==========================================
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap');
+    /* إخفاء أيقونة القطة (GitHub) والقائمة العلوية بالكامل */
+    header {visibility: hidden;}
     
+    /* إخفاء علامة Streamlit البرتقالية من أسفل الموقع */
+    footer {visibility: hidden;}
+    
+    /* إخفاء الفراغ الأبيض الزائد من الأعلى بعد إخفاء القائمة */
+    .block-container {padding-top: 2rem;}
+
+    @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap');
     * { font-family: 'Tajawal', sans-serif; }
     
     .sentence-card { 
@@ -73,7 +81,6 @@ for item in sentences:
     </div>
     """, unsafe_allow_html=True)
     
-    # الحل الجذري لمشكلة الآيفون (استخدام mpeg بدلاً من mp3)
     if os.path.exists(item['audio']):
         try:
             st.audio(item['audio'], format="audio/mpeg")
@@ -81,15 +88,14 @@ for item in sentences:
             st.error("لا يمكن تشغيل الصوت")
 
 # ==========================================
-# 5. لوحة التحكم الجانبية (محمية برقم سري)
+# 5. لوحة الإدارة المخفية (بالرابط السري فقط)
 # ==========================================
-with st.sidebar:
-    st.markdown("<h3 style='text-align: right; direction: rtl;'>⚙️ لوحة الإدارة</h3>", unsafe_allow_html=True)
-    
-    secret_password = st.text_input("الرمز السري (12345):", type="password")
-    
-    if secret_password == "12345":
-        st.success("🔓 تم الفتح!")
+# سيتم التحقق مما إذا كان الرابط يحتوي على كلمة ?admin=true
+if "admin" in st.query_params and st.query_params["admin"] == "true":
+    with st.sidebar:
+        st.markdown("<h3 style='text-align: right; direction: rtl;'>⚙️ لوحة الإدارة السريّة</h3>", unsafe_allow_html=True)
+        st.success("أهلاً بك يا مدير الموقع!")
+        
         bulk_text = st.text_area("انسخ الجمل هنا:", height=200)
         
         if st.button("🚀 إضافة ونشر"):
@@ -115,5 +121,3 @@ with st.sidebar:
                 save_data(sentences)
                 st.success(f"✅ تم إضافة {added_count} جملة!")
                 st.rerun()
-    elif secret_password != "":
-        st.error("❌ الرمز السري خاطئ!")
