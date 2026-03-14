@@ -1,214 +1,85 @@
-from fastapi import FastAPI, Request, Form
-from fastapi.responses import HTMLResponse
-from fastapi.staticfiles import StaticFiles
-from sqlalchemy import create_engine, Column, Integer, String
-from sqlalchemy.orm import sessionmaker, declarative_base
-import requests
+import streamlit as st
 import os
+import json
 
-app = FastAPI()
+# 1. إعدادات الصفحة
+st.set_page_config(page_title="منصة إتقان الإنجليزية", page_icon="🎓", layout="centered")
 
-# -------------------------
-# DATABASE
-# -------------------------
-
-DATABASE_URL = "sqlite:///itqan.db"
-
-engine = create_engine(DATABASE_URL)
-Session = sessionmaker(bind=engine)
-Base = declarative_base()
-
-class Sentence(Base):
-
-    __tablename__ = "sentences"
-
-    id = Column(Integer, primary_key=True)
-    english = Column(String)
-    arabic = Column(String)
-    pronunciation = Column(String)
-    section = Column(String)
-    audio = Column(String)
-
-Base.metadata.create_all(engine)
-
-# -------------------------
-# STATIC FOLDER
-# -------------------------
-
-if not os.path.exists("audio"):
-    os.makedirs("audio")
-
-app.mount("/audio", StaticFiles(directory="audio"), name="audio")
-
-# -------------------------
-# AZURE TTS
-# -------------------------
-
-AZURE_KEY = "YOUR_AZURE_KEY"
-AZURE_REGION = "eastus"
-
-def generate_audio(text):
-
-    filename = text.replace(" ","_")[:30]
-
-    url = f"https://{AZURE_REGION}.tts.speech.microsoft.com/cognitiveservices/v1"
-
-    headers = {
-        "Ocp-Apim-Subscription-Key": AZURE_KEY,
-        "Content-Type": "application/ssml+xml",
-        "X-Microsoft-OutputFormat": "audio-16khz-128kbitrate-mono-mp3"
+# 2. تصميم احترافي (إخفاء القطة والشريط العلوي)
+st.markdown("""
+<style>
+    header, [data-testid="stHeader"], .stAppHeader {display: none !important; visibility: hidden !important;}
+    footer {visibility: hidden !important;}
+    [data-testid="stDecoration"] {display: none !important;}
+    .stDeployButton {display: none !important;}
+    .block-container {padding-top: 0rem !important;}
+    @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap');
+    * { font-family: 'Tajawal', sans-serif; }
+    body { background-color: #0e1117; }
+    .sentence-card { 
+        direction: rtl; background-color: #1e1e1e; color: #ffffff; 
+        border-radius: 15px; padding: 20px; margin-bottom: 20px; 
+        box-shadow: 0 4px 15px rgba(0,0,0,0.5); border-right: 6px solid #4CAF50; text-align: right;
     }
+    .eng-text { color: #64b5f6; font-size: 24px; font-weight: bold; direction: ltr; text-align: left; }
+    .ar-text { color: #e0e0e0; font-size: 18px; }
+    .pron-text { color: #ffb74d; font-size: 16px; }
+    [data-testid="stSidebarCollapsedControl"] { color: #4CAF50 !important; top: 15px !important; }
+</style>
+""", unsafe_allow_html=True)
 
-    ssml = f"""
-    <speak version='1.0' xml:lang='en-US'>
-    <voice name='en-US-GuyNeural'>
-    {text}
-    </voice>
-    </speak>
-    """
+# 3. إدارة البيانات
+if not os.path.exists("audio"): os.makedirs("audio")
+DATA_FILE = "sentences.json"
 
-    response = requests.post(url, headers=headers, data=ssml)
+def load_data():
+    if os.path.exists(DATA_FILE):
+        try:
+            with open(DATA_FILE, "r", encoding="utf-8") as f: return json.load(f)
+        except: return []
+    return []
 
-    path = f"audio/{filename}.mp3"
+def save_data(data):
+    with open(DATA_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=4)
 
-    with open(path,"wb") as f:
-        f.write(response.content)
+sentences = load_data()
+all_categories = sorted(list(set([s.get("category", "عام") for s in sentences] + ["عام"])))
 
-    return f"/audio/{filename}.mp3"
+# 4. القائمة الجانبية
+with st.sidebar:
+    st.markdown("<h2 style='text-align: right;'>📚 الأقسام</h2>", unsafe_allow_html=True)
+    selected_category = st.selectbox("اختر القسم:", all_categories)
+    st.write("---")
+    if st.query_params.get("admin") == "true":
+        st.error("🛠 لوحة الإدارة")
+        cat_input = st.text_input("📁 اسم القسم الجديد:", "عام")
+        bulk_text = st.text_area("الجمل (جملة | ترجمة | نطق):", height=150)
+        if st.button("🚀 إضافة بصوت رجل"):
+            lines = bulk_text.strip().split('\n')
+            for line in lines:
+                if "|" in line:
+                    parts = line.split("|")
+                    eng, ar, pron = parts[0].strip(), parts[1].strip(), parts[2].strip()
+                    audio_path = f"audio/v_{len(sentences)}.mp3"
+                    # صوت الرجل Guy
+                    os.system(f'edge-tts --text "{eng}" --voice "en-US-GuyNeural" --write-media "{audio_path}"')
+                    sentences.append({"english": eng, "arabic": ar, "pronunciation": pron, "audio": audio_path, "category": cat_input})
+            save_data(sentences)
+            st.success("تم الحفظ!")
+            st.rerun()
 
-# -------------------------
-# HOME PAGE
-# -------------------------
-
-@app.get("/", response_class=HTMLResponse)
-def home():
-
-    db = Session()
-
-    sentences = db.query(Sentence).all()
-
-    html = """
-    <html>
-    <head>
-    <title>Itqan English</title>
-    <style>
-
-    body{
-    background:#0e0e0e;
-    color:white;
-    font-family:Arial;
-    padding:40px;
-    }
-
-    .card{
-    border:1px solid #00aa66;
-    padding:20px;
-    margin-bottom:20px;
-    border-radius:10px;
-    background:#161616;
-    }
-
-    h2{
-    color:#00ff99;
-    }
-
-    </style>
-    </head>
-    <body>
-
-    <h1>منصة إتقان</h1>
-
-    <a href='/admin'>لوحة الإدارة</a>
-
-    """
-
-    for s in sentences:
-
-        html += f"""
-        <div class='card'>
-
-        <h2>{s.english}</h2>
-
-        <p>{s.arabic}</p>
-
-        <p>{s.pronunciation}</p>
-
-        <audio controls>
-        <source src='{s.audio}' type='audio/mpeg'>
-        </audio>
-
-        </div>
-        """
-
-    html += "</body></html>"
-
-    return html
-
-# -------------------------
-# ADMIN PAGE
-# -------------------------
-
-@app.get("/admin", response_class=HTMLResponse)
-def admin():
-
-    return """
-
-    <html>
-
-    <body style="background:black;color:white;font-family:Arial;padding:40px">
-
-    <h2>إضافة جملة</h2>
-
-    <form method="post" action="/add">
-
-    English sentence<br>
-    <input name="english"><br><br>
-
-    Arabic translation<br>
-    <input name="arabic"><br><br>
-
-    Arabic pronunciation<br>
-    <input name="pronunciation"><br><br>
-
-    Section<br>
-    <input name="section"><br><br>
-
-    <button type="submit">Add</button>
-
-    </form>
-
-    </body>
-    </html>
-
-    """
-
-# -------------------------
-# ADD SENTENCE
-# -------------------------
-
-@app.post("/add")
-def add(
-
-english: str = Form(...),
-arabic: str = Form(...),
-pronunciation: str = Form(...),
-section: str = Form(...)
-
-):
-
-    db = Session()
-
-    audio = generate_audio(english)
-
-    s = Sentence(
-        english=english,
-        arabic=arabic,
-        pronunciation=pronunciation,
-        section=section,
-        audio=audio
-    )
-
-    db.add(s)
-    db.commit()
-
-    return {"status":"added"}
+# 5. الواجهة للطلاب
+st.markdown("<h1 style='text-align:center; color:#4CAF50;'>🎓 منصة إتقان الإنجليزية</h1>", unsafe_allow_html=True)
+filtered = [s for s in sentences if s.get("category", "عام") == selected_category]
+for item in filtered:
+    st.markdown(f"""
+    <div class="sentence-card">
+        <div class="eng-text">{item['english']}</div>
+        <div class="ar-text">📖 {item['arabic']}</div>
+        <div class="pron-text">🗣️ نطق: {item['pronunciation']}</div>
+    </div>
+    """, unsafe_allow_html=True)
+    if os.path.exists(item['audio']):
+        with open(item['audio'], "rb") as f:
+            st.audio(f.read(), format="audio/mpeg")
