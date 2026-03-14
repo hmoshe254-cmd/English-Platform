@@ -1,88 +1,139 @@
 import streamlit as st
-import os
 import json
+import os
+import asyncio
+import edge_tts
+import base64
+from datetime import datetime
 
-# 1. إعدادات الصفحة
-st.set_page_config(page_title="منصة إتقان الإنجليزية", page_icon="🎓", layout="centered")
+# --- إعدادات الصفحة الأساسية ---
+st.set_page_config(page_title="منصة إتقان الإنجليزية", layout="wide", initial_sidebar_state="expanded")
 
-# 2. تصميم احترافي (إخفاء القطة والزوائد تماماً)
-st.markdown("""
-<style>
-    header, [data-testid="stHeader"], footer, .stAppHeader {display: none !important; visibility: hidden !important;}
-    [data-testid="stDecoration"], .stDeployButton, [data-testid="stToolbar"] {display: none !important;}
-    .block-container {padding-top: 2rem !important;}
-    @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap');
-    * { font-family: 'Tajawal', sans-serif; }
-    body { background-color: #0e1117; color: white; }
-    .sentence-card { 
-        direction: rtl; background-color: #1e1e1e; border-radius: 15px; 
-        padding: 25px; margin-bottom: 20px; border-right: 8px solid #4CAF50; text-align: right;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-    }
-    .eng-text { color: #64b5f6; font-size: 26px; font-weight: bold; direction: ltr; text-align: left; margin-bottom: 10px;}
-    .ar-text { color: #e0e0e0; font-size: 19px; }
-    .pron-text { color: #ffb74d; font-size: 17px; background: rgba(255,183,77,0.1); padding: 5px; border-radius: 8px;}
-</style>
-""", unsafe_allow_html=True)
+# --- ملف تخزين البيانات ---
+DB_FILE = 'data_store.json'
+AUDIO_DIR = 'audio_files'
 
-# 3. إدارة البيانات
-if not os.path.exists("audio"): os.makedirs("audio")
-DATA_FILE = "sentences.json"
+if not os.path.exists(AUDIO_DIR):
+    os.makedirs(AUDIO_DIR)
 
 def load_data():
-    if os.path.exists(DATA_FILE):
-        try:
-            with open(DATA_FILE, "r", encoding="utf-8") as f: return json.load(f)
-        except: return []
-    return []
+    if os.path.exists(DB_FILE):
+        with open(DB_FILE, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    return {}
 
-sentences = load_data()
-all_categories = sorted(list(set([s.get("category", "عام") for s in sentences] + ["عام"])))
+def save_data(data):
+    with open(DB_FILE, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=4)
 
-# 4. واجهة الطالب (العنوان واختيار القسم)
-st.markdown("<h1 style='text-align:center; color:#4CAF50;'>🎓 منصة إتقان اللغة الإنجليزية</h1>", unsafe_allow_html=True)
+# --- محرك النطق (Edge TTS) ---
+async def generate_voice(text, filename):
+    communicate = edge_tts.Communicate(text, "en-US-GuyNeural")
+    await communicate.save(os.path.join(AUDIO_DIR, filename))
 
-# 5. 🛠 لوحة الإدارة (ستظهر هنا في قلب الصفحة للمدير فقط)
-if st.query_params.get("admin") == "true":
-    with st.expander("🛠 لوحة التحكم - إضافة جمل جديدة", expanded=True):
-        st.warning("أهلاً بك يا محمد في لوحة الإدارة")
-        
-        # ⭐ هذه هي الخانة المطلوبة - ستظهر هنا إجبارياً
-        new_cat_name = st.text_input("📂 1. اكتب اسم القسم (مثلاً: الغرفة):", "عام")
-        
-        bulk_input = st.text_area("📝 2. الصق الجمل هنا (جملة | ترجمة | نطق):", height=150)
-        
-        if st.button("🚀 3. حفظ ونشر بصوت رجل"):
-            lines = bulk_input.strip().split('\n')
-            for line in lines:
-                if "|" in line:
-                    parts = line.split("|")
-                    eng, ar, pron = parts[0].strip(), parts[1].strip(), parts[2].strip()
-                    audio_path = f"audio/v_{len(sentences)}.mp3"
-                    # صوت الرجل Guy
-                    os.system(f'edge-tts --text "{eng}" --voice "en-US-GuyNeural" --write-media "{audio_path}"')
-                    sentences.append({"english": eng, "arabic": ar, "pronunciation": pron, "audio": audio_path, "category": new_cat_name})
+def get_audio_html(file_path):
+    with open(file_path, "rb") as f:
+        data = f.read()
+        b64 = base64.b64encode(data).decode()
+        return f'<audio controls style="width: 100%; height: 40px;"><source src="data:audio/mp3;base64,{b64}" type="audio/mp3"></audio>'
+
+# --- إخفاء عناصر Streamlit (CSS القوي) ---
+hide_st_style = """
+            <style>
+            /* إخفاء الهيدر والقائمة والماركة */
+            #MainMenu {visibility: hidden;}
+            footer {visibility: hidden;}
+            header {visibility: hidden;}
+            .stDeployButton {display:none;}
+            [data-testid="stToolbar"] {visibility: hidden !important;}
             
-            with open(DATA_FILE, "w", encoding="utf-8") as f:
-                json.dump(sentences, f, ensure_ascii=False, indent=4)
-            st.success(f"تمت إضافة الجمل لقسم: {new_cat_name}")
-            st.rerun()
+            /* تصميم الخلفية والوضع الداكن */
+            .stApp {
+                background-color: #000000;
+                color: #ffffff;
+            }
+            
+            /* تصميم البطاقات الإحترافي */
+            .english-card {
+                background-color: #1E1E1E;
+                border-radius: 15px;
+                padding: 20px;
+                margin-bottom: 15px;
+                border-left: 5px solid #28a745;
+                box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            }
+            .en-text { font-size: 24px; font-weight: bold; color: #ffffff; margin-bottom: 5px; }
+            .ar-text { font-size: 18px; color: #b0b0b0; direction: rtl; }
+            .pron-text { font-size: 16px; color: #28a745; font-style: italic; }
+            
+            /* تعديل القائمة الجانبية */
+            section[data-testid="stSidebar"] {
+                background-color: #111111;
+            }
+            </style>
+            """
+st.markdown(hide_st_style, unsafe_allow_html=True)
 
-st.write("---")
+# --- منطق لوحة التحكم (Hidden Admin Panel) ---
+query_params = st.query_params
+is_admin = query_params.get("admin") == "true"
 
-# اختيار القسم للطالب
-selected_category = st.selectbox("📂 اختر القسم الذي تريد دراسته:", all_categories)
+data = load_data()
 
-# 6. عرض الجمل
-filtered = [s for s in sentences if s.get("category", "عام") == selected_category]
-for item in filtered:
-    st.markdown(f"""
-    <div class="sentence-card">
-        <div class="eng-text">{item['english']}</div>
-        <div class="ar-text">📖 {item['arabic']}</div>
-        <div class="pron-text">🗣️ نطق: {item['pronunciation']}</div>
-    </div>
-    """, unsafe_allow_html=True)
-    if os.path.exists(item['audio']):
-        with open(item['audio'], "rb") as f:
-            st.audio(f.read(), format="audio/mpeg")
+if is_admin:
+    st.title("🛠 لوحة الإدارة السرية")
+    with st.expander("إضافة قسم أو جمل جديدة", expanded=True):
+        new_cat = st.text_input("اسم القسم الجديد (مثلاً: المطار)")
+        batch_input = st.text_area("أدخل الجمل بتنسيق: (الجملة | الترجمة | النطق العربي)", help="مثال: Hello | مرحباً | هالو")
+        
+        if st.button("حفظ البيانات وتوليد الصوت"):
+            if new_cat and batch_input:
+                if new_cat not in data:
+                    data[new_cat] = []
+                
+                lines = batch_input.split('\n')
+                progress_bar = st.progress(0)
+                
+                for i, line in enumerate(lines):
+                    if '|' in line:
+                        en, ar, pr = map(str.strip, line.split('|'))
+                        audio_filename = f"{en[:10]}_{datetime.now().timestamp()}.mp3".replace(" ", "_")
+                        
+                        # توليد الصوت
+                        asyncio.run(generate_voice(en, audio_filename))
+                        
+                        data[new_cat].append({
+                            "en": en,
+                            "ar": ar,
+                            "pr": pr,
+                            "audio": audio_filename
+                        })
+                
+                save_data(data)
+                st.success(f"تم تحديث قسم {new_cat} بنجاح!")
+                st.rerun()
+
+# --- واجهة المستخدم (Student UI) ---
+st.sidebar.title("📚 الأقسام")
+if data:
+    category = st.sidebar.radio("اختر التصنيف:", list(data.keys()))
+
+    st.markdown(f"<h2 style='text-align: center; color: #28a745;'>{category}</h2>", unsafe_allow_html=True)
+    
+    for item in data[category]:
+        with st.container():
+            st.markdown(f"""
+            <div class="english-card">
+                <div class="en-text">{item['en']}</div>
+                <div class="ar-text">{item['ar']}</div>
+                <div class="pron-text">النطق: {item['pr']}</div>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # عرض مشغل الصوت
+            audio_path = os.path.join(AUDIO_DIR, item['audio'])
+            if os.path.exists(audio_path):
+                st.markdown(get_audio_html(audio_path), unsafe_allow_html=True)
+            st.markdown("---")
+else:
+    st.info("مرحباً بك! سيظهر المحتوى هنا بمجرد إضافة البيانات من قبل الإدارة.")
