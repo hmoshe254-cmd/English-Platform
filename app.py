@@ -8,7 +8,7 @@ import json
 st.set_page_config(page_title="تعلم الإنجليزية بطلاقة", page_icon="🎓", layout="centered")
 
 # ==========================================
-# 2. قسم التصميم والأناقة (CSS) - تم إصلاح مشكلة الهاتف
+# 2. قسم التصميم والأناقة (CSS)
 # ==========================================
 st.markdown("""
 <style>
@@ -16,7 +16,6 @@ st.markdown("""
     
     * { font-family: 'Tajawal', sans-serif; }
     
-    /* تصميم البطاقات وجعلها من اليمين لليسار بدون تخريب باقي الموقع */
     .sentence-card { 
         direction: rtl;
         background-color: #ffffff; 
@@ -46,8 +45,11 @@ DATA_FILE = "sentences.json"
 
 def load_data():
     if os.path.exists(DATA_FILE):
-        with open(DATA_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
+        try:
+            with open(DATA_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except:
+            return []
     return []
 
 def save_data(data):
@@ -71,27 +73,23 @@ for item in sentences:
     </div>
     """, unsafe_allow_html=True)
     
-    # تم إصلاح مشكلة الصوت على الإنترنت بقراءة الملف كبيانات (Bytes)
+    # الحل الجذري لمشكلة الآيفون (استخدام mpeg بدلاً من mp3)
     if os.path.exists(item['audio']):
         try:
-            with open(item['audio'], "rb") as audio_file:
-                audio_bytes = audio_file.read()
-            st.audio(audio_bytes, format="audio/mp3")
+            st.audio(item['audio'], format="audio/mpeg")
         except Exception as e:
-            st.error("حدث خطأ في قراءة ملف الصوت.")
+            st.error("لا يمكن تشغيل الصوت")
 
 # ==========================================
 # 5. لوحة التحكم الجانبية (محمية برقم سري)
 # ==========================================
 with st.sidebar:
-    st.markdown("<h3 style='text-align: right; direction: rtl;'>⚙️ لوحة الإدارة السريّة</h3>", unsafe_allow_html=True)
+    st.markdown("<h3 style='text-align: right; direction: rtl;'>⚙️ لوحة الإدارة</h3>", unsafe_allow_html=True)
     
-    # يمكنك تغيير الرقم السري 12345 لأي رقم تريده
-    secret_password = st.text_input("الرمز السري:", type="password")
+    secret_password = st.text_input("الرمز السري (12345):", type="password")
     
     if secret_password == "12345":
-        st.success("🔓 تم فتح اللوحة!")
-        
+        st.success("🔓 تم الفتح!")
         bulk_text = st.text_area("انسخ الجمل هنا:", height=200)
         
         if st.button("🚀 إضافة ونشر"):
@@ -107,8 +105,7 @@ with st.sidebar:
                         pron = parts[2].strip()
                         
                         if not any(s['english'] == eng for s in sentences):
-                            audio_path = f"audio/{len(sentences)}.mp3"
-                            # توليد الصوت من الإنترنت
+                            audio_path = f"audio/s_{len(sentences)}.mp3"
                             os.system(f'edge-tts --text "{eng}" --voice "en-US-AriaNeural" --write-media "{audio_path}"')
                             
                             sentences.append({"english": eng, "arabic": ar, "pronunciation": pron, "audio": audio_path})
