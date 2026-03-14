@@ -8,26 +8,27 @@ import json
 st.set_page_config(page_title="تعلم الإنجليزية بطلاقة", page_icon="🎓", layout="centered")
 
 # ==========================================
-# 2. قسم التصميم (إخفاء كل الأيقونات والعلامات المزعجة)
+# 2. قسم التصميم (الإخفاء الشامل والتنسيق)
 # ==========================================
 st.markdown("""
 <style>
-    /* إخفاء القائمة العلوية بالكامل (أيقونة جيت هاب وغيرها) */
-    header {visibility: hidden;}
+    /* الإخفاء الإجباري لكل أيقونات وعلامات Streamlit */
+    #MainMenu {visibility: hidden !important; display: none !important;}
+    header {visibility: hidden !important; display: none !important;}
+    [data-testid="stHeader"] {visibility: hidden !important; display: none !important;}
+    [data-testid="stToolbar"] {visibility: hidden !important; display: none !important;}
+    footer {visibility: hidden !important; display: none !important;}
+    [data-testid="stAppDeployButton"] {visibility: hidden !important; display: none !important;}
+    .stAppDeployButton {display: none !important;}
     
-    /* إخفاء علامة Streamlit من أسفل الموقع */
-    footer {visibility: hidden;}
-    
-    /* إخفاء الأزرار العائمة (الزر الأحمر وصورتك الشخصية) */
-    [data-testid="stToolbar"] {display: none !important;}
-    [data-testid="stAppDeployButton"] {display: none !important;}
-    
-    /* إخفاء الفراغ الأبيض الزائد من الأعلى */
-    .block-container {padding-top: 2rem;}
+    /* رفع محتوى الموقع للأعلى بعد إخفاء القوائم */
+    .block-container {padding-top: 1rem !important; padding-bottom: 0rem !important;}
 
+    /* خط الموقع والتنسيق الأساسي */
     @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap');
     * { font-family: 'Tajawal', sans-serif; }
     
+    /* تصميم بطاقات الجمل */
     .sentence-card { 
         direction: rtl;
         background-color: #ffffff; 
@@ -71,7 +72,7 @@ def save_data(data):
 sentences = load_data()
 
 # ==========================================
-# 4. واجهة الطالب (الصفحة الرئيسية)
+# 4. واجهة الطالب (الصفحة الرئيسية للجميع)
 # ==========================================
 st.markdown("<h1 class='main-title'>🎓 منصة إتقان اللغة الإنجليزية</h1>", unsafe_allow_html=True)
 st.write("---")
@@ -85,20 +86,24 @@ for item in sentences:
     </div>
     """, unsafe_allow_html=True)
     
+    # مشغل الصوت (متوافق مع الآيفون وكل الأجهزة)
     if os.path.exists(item['audio']):
         try:
-            st.audio(item['audio'], format="audio/mpeg")
+            with open(item['audio'], "rb") as audio_file:
+                audio_bytes = audio_file.read()
+            st.audio(audio_bytes, format="audio/mpeg")
         except Exception as e:
-            st.error("لا يمكن تشغيل الصوت")
+            st.error("حدث خطأ في قراءة ملف الصوت.")
 
 # ==========================================
-# 5. لوحة الإدارة المخفية (بالرابط السري فقط)
+# 5. لوحة الإدارة المخفية (تظهر لك بالرابط السري فقط)
 # ==========================================
-# سيتم التحقق مما إذا كان الرابط يحتوي على كلمة ?admin=true
+# التحقق من وجود كلمة ?admin=true في رابط الموقع
 if "admin" in st.query_params and st.query_params["admin"] == "true":
     with st.sidebar:
         st.markdown("<h3 style='text-align: right; direction: rtl;'>⚙️ لوحة الإدارة السريّة</h3>", unsafe_allow_html=True)
         st.success("أهلاً بك يا مدير الموقع!")
+        st.write("أضف جملك هنا (الجملة | الترجمة | النطق):")
         
         bulk_text = st.text_area("انسخ الجمل هنا:", height=200)
         
@@ -114,8 +119,10 @@ if "admin" in st.query_params and st.query_params["admin"] == "true":
                         ar = parts[1].strip()
                         pron = parts[2].strip()
                         
+                        # التأكد من عدم تكرار الجملة
                         if not any(s['english'] == eng for s in sentences):
                             audio_path = f"audio/s_{len(sentences)}.mp3"
+                            # توليد الصوت بلكنة أمريكية ممتازة
                             os.system(f'edge-tts --text "{eng}" --voice "en-US-AriaNeural" --write-media "{audio_path}"')
                             
                             sentences.append({"english": eng, "arabic": ar, "pronunciation": pron, "audio": audio_path})
@@ -123,5 +130,5 @@ if "admin" in st.query_params and st.query_params["admin"] == "true":
             
             if added_count > 0:
                 save_data(sentences)
-                st.success(f"✅ تم إضافة {added_count} جملة!")
+                st.success(f"✅ تم إضافة {added_count} جملة بنجاح!")
                 st.rerun()
