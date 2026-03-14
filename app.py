@@ -8,26 +8,38 @@ import json
 st.set_page_config(page_title="منصة إتقان الإنجليزية", page_icon="🎓", layout="centered")
 
 # ==========================================
-# 2. تصميم احترافي (مسح الشريط الأبيض العلوي تماماً)
+# 2. تصميم احترافي (إظهار زر القائمة فقط وإخفاء الباقي)
 # ==========================================
 st.markdown("""
 <style>
-    /* 🛑 إخفاء الشريط الأبيض العلوي (Fork, GitHub, Decoration) نهائياً */
-    header {visibility: hidden !important; height: 0px !important;}
-    [data-testid="stHeader"] {visibility: hidden !important; height: 0px !important;}
-    [data-testid="stDecoration"] {display: none !important;}
+    /* 1. إخفاء الشريط الأبيض العلوي تماماً */
+    [data-testid="stHeader"] {
+        background-color: rgba(0,0,0,0) !important;
+        color: white !important;
+    }
+    
+    /* 2. إخفاء أيقونات GitHub و Fork والنقاط الثلاث المزعجة */
     footer {visibility: hidden !important;}
     .stDeployButton {display: none !important;}
-    [data-testid="stToolbar"] {visibility: hidden !important;}
+    header {background-color: transparent !important;}
 
-    /* ضبط المسافة بالأعلى لتبدأ من الصفر */
-    .block-container {padding-top: 0rem !important; padding-bottom: 1rem !important;}
+    /* 3. 🟢 إظهار "الخطوط الثلاثة" (زر القائمة) وجعلها واضحة جداً للطلاب */
+    [data-testid="stSidebarCollapsedControl"] {
+        visibility: visible !important;
+        display: block !important;
+        color: #4CAF50 !important; /* لون أخضر فخم */
+        background-color: rgba(255,255,255,0.1) !important; /* خلفية خفيفة */
+        border-radius: 50% !important;
+        top: 10px !important;
+        left: 10px !important;
+    }
 
-    /* تصميم البطاقات (Dark Mode) الفخم */
+    /* 4. تنسيق محتوى الموقع */
+    .block-container {padding-top: 2rem !important;}
     @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap');
     * { font-family: 'Tajawal', sans-serif; }
     
-    body { background-color: #0e1117; } /* خلفية الموقع كاملة سوداء */
+    body { background-color: #0e1117; }
     
     .sentence-card { 
         direction: rtl; 
@@ -43,13 +55,7 @@ st.markdown("""
     .eng-text { color: #64b5f6; font-size: 24px; font-weight: bold; direction: ltr; text-align: left; margin-bottom: 10px;}
     .ar-text { color: #e0e0e0; font-size: 18px; margin-bottom: 8px;}
     .pron-text { color: #ffb74d; font-size: 16px; }
-    .main-title { color: #4CAF50; text-align: center; direction: rtl; font-size: 30px; font-weight: bold; padding-top: 20px;}
-    
-    /* جعل زر القائمة (الخطوط الثلاثة) بلون أخضر ليسهل رؤيته */
-    [data-testid="stSidebarCollapsedControl"] {
-        color: #4CAF50 !important;
-        top: 20px !important;
-    }
+    .main-title { color: #4CAF50; text-align: center; direction: rtl; font-size: 28px; font-weight: bold; margin-top: 20px;}
 </style>
 """, unsafe_allow_html=True)
 
@@ -78,40 +84,38 @@ all_categories = sorted(list(set([s.get("category", "عام") for s in sentences
 # ==========================================
 with st.sidebar:
     st.markdown("<h2 style='text-align: right; color:#4CAF50;'>📚 تصفح الأقسام</h2>", unsafe_allow_html=True)
-    selected_category = st.selectbox("اختر القسم المراد دراسته:", all_categories)
+    st.write("---")
+    
+    # اختيار القسم
+    selected_category = st.selectbox("اختر القسم:", all_categories)
     
     st.write("---")
     
-    # تظهر فقط عند إضافة ?admin=true للرابط
+    # لوحة الإدارة (تظهر بـ ?admin=true)
     if st.query_params.get("admin") == "true":
         st.markdown("<h3 style='color:#ffb74d; text-align:right;'>🛠 لوحة الإدارة</h3>", unsafe_allow_html=True)
         cat_input = st.text_input("📂 اسم القسم الجديد:", "عام")
         bulk_text = st.text_area("أضف جملك (جملة | ترجمة | نطق):", height=150)
         
-        if st.button("🚀 نشر الجمل بصوت رجل"):
+        if st.button("🚀 نشر بصوت رجل"):
             lines = bulk_text.strip().split('\n')
             for line in lines:
                 if "|" in line:
                     parts = line.split("|")
                     eng, ar, pron = parts[0].strip(), parts[1].strip(), parts[2].strip()
-                    
                     audio_path = f"audio/s_{len(sentences)}.mp3"
-                    # استخدام صوت الرجل Guy
+                    # صوت الرجل Guy
                     os.system(f'edge-tts --text "{eng}" --voice "en-US-GuyNeural" --write-media "{audio_path}"')
-                    
-                    sentences.append({
-                        "english": eng, "arabic": ar, "pronunciation": pron, 
-                        "audio": audio_path, "category": cat_input
-                    })
+                    sentences.append({"english": eng, "arabic": ar, "pronunciation": pron, "audio": audio_path, "category": cat_input})
             save_data(sentences)
             st.success("تم التحديث!")
             st.rerun()
 
 # ==========================================
-# 5. عرض الموقع للطلاب
+# 5. عرض الموقع
 # ==========================================
 st.markdown("<h1 class='main-title'>🎓 منصة إتقان اللغة الإنجليزية</h1>", unsafe_allow_html=True)
-st.markdown(f"<p style='text-align:center; color:#888;'>أنت الآن في قسم: {selected_category}</p>", unsafe_allow_html=True)
+st.markdown(f"<p style='text-align:center; color:#888;'>القسم الحالي: {selected_category}</p>", unsafe_allow_html=True)
 
 filtered = [s for s in sentences if s.get("category", "عام") == selected_category]
 
