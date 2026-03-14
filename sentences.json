@@ -1,0 +1,20 @@
+[
+    {
+        "english": "I am so happy today",
+        "arabic": "أنا سعيد جداً اليوم",
+        "pronunciation": "آي آم سُو هَابِي تودَاي",
+        "audio": "audio/0.mp3"
+    },
+    {
+        "english": "This is my new website",
+        "arabic": "هذا هو موقعي الجديد",
+        "pronunciation": "ذِس إِز مَاي نِيُو وِيبْسَايْت",
+        "audio": "audio/1.mp3"
+    },
+    {
+        "english": "Never give up on your dreams",
+        "arabic": "لا تتخلى أبداً عن أحلامك",
+        "pronunciation": "نِيفِر جِف أب أُون يُور دْرِيمْز",
+        "audio": "audio/2.mp3"
+    }
+]
