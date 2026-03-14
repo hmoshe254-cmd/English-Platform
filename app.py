@@ -8,34 +8,21 @@ import json
 st.set_page_config(page_title="منصة إتقان الإنجليزية", page_icon="🎓", layout="centered")
 
 # ==========================================
-# 2. تصميم احترافي (إظهار زر القائمة فقط وإخفاء الباقي)
+# 2. تصميم احترافي (إخفاء القطة والشريط العلوي تماماً)
 # ==========================================
 st.markdown("""
 <style>
-    /* 1. إخفاء الشريط الأبيض العلوي تماماً */
-    [data-testid="stHeader"] {
-        background-color: rgba(0,0,0,0) !important;
-        color: white !important;
-    }
-    
-    /* 2. إخفاء أيقونات GitHub و Fork والنقاط الثلاث المزعجة */
+    /* 🛑 إخفاء القطة وجميع أيقونات GitHub و Fork نهائياً */
+    header {visibility: hidden !important; height: 0px !important;}
+    [data-testid="stHeader"] {visibility: hidden !important; height: 0px !important;}
+    [data-testid="stDecoration"] {display: none !important;}
     footer {visibility: hidden !important;}
     .stDeployButton {display: none !important;}
-    header {background-color: transparent !important;}
+    [data-testid="stToolbar"] {visibility: hidden !important;}
 
-    /* 3. 🟢 إظهار "الخطوط الثلاثة" (زر القائمة) وجعلها واضحة جداً للطلاب */
-    [data-testid="stSidebarCollapsedControl"] {
-        visibility: visible !important;
-        display: block !important;
-        color: #4CAF50 !important; /* لون أخضر فخم */
-        background-color: rgba(255,255,255,0.1) !important; /* خلفية خفيفة */
-        border-radius: 50% !important;
-        top: 10px !important;
-        left: 10px !important;
-    }
+    /* ضبط المسافات لتبدأ من الأعلى */
+    .block-container {padding-top: 0rem !important; padding-bottom: 1rem !important;}
 
-    /* 4. تنسيق محتوى الموقع */
-    .block-container {padding-top: 2rem !important;}
     @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap');
     * { font-family: 'Tajawal', sans-serif; }
     
@@ -55,12 +42,21 @@ st.markdown("""
     .eng-text { color: #64b5f6; font-size: 24px; font-weight: bold; direction: ltr; text-align: left; margin-bottom: 10px;}
     .ar-text { color: #e0e0e0; font-size: 18px; margin-bottom: 8px;}
     .pron-text { color: #ffb74d; font-size: 16px; }
-    .main-title { color: #4CAF50; text-align: center; direction: rtl; font-size: 28px; font-weight: bold; margin-top: 20px;}
+    .main-title { color: #4CAF50; text-align: center; direction: rtl; font-size: 30px; font-weight: bold; padding-top: 20px;}
+    
+    /* جعل زر القائمة (الخطوط الثلاثة) ظاهراً بوضوح في الهاتف */
+    [data-testid="stSidebarCollapsedControl"] {
+        color: #4CAF50 !important;
+        background-color: rgba(76, 175, 80, 0.1) !important;
+        border-radius: 10px !important;
+        top: 15px !important;
+        left: 15px !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 3. إدارة البيانات
+# 3. إدارة البيانات والملفات
 # ==========================================
 if not os.path.exists("audio"): os.makedirs("audio")
 DATA_FILE = "sentences.json"
@@ -80,22 +76,23 @@ sentences = load_data()
 all_categories = sorted(list(set([s.get("category", "عام") for s in sentences] + ["عام"])))
 
 # ==========================================
-# 4. القائمة الجانبية (الأقسام + الإدارة)
+# 4. القائمة الجانبية (الأقسام + لوحة الإدارة)
 # ==========================================
 with st.sidebar:
     st.markdown("<h2 style='text-align: right; color:#4CAF50;'>📚 تصفح الأقسام</h2>", unsafe_allow_html=True)
-    st.write("---")
-    
-    # اختيار القسم
+    # الطالب يختار من هنا (ستظهر له كـ 3 خطوط في الهاتف)
     selected_category = st.selectbox("اختر القسم:", all_categories)
     
     st.write("---")
     
-    # لوحة الإدارة (تظهر بـ ?admin=true)
+    # لوحة الإدارة (تظهر فقط عند إضافة ?admin=true للرابط)
     if st.query_params.get("admin") == "true":
         st.markdown("<h3 style='color:#ffb74d; text-align:right;'>🛠 لوحة الإدارة</h3>", unsafe_allow_html=True)
+        
+        # 🟢 حقل اسم القسم (المدرسة، البيت، إلخ)
         cat_input = st.text_input("📂 اسم القسم الجديد:", "عام")
-        bulk_text = st.text_area("أضف جملك (جملة | ترجمة | نطق):", height=150)
+        
+        bulk_text = st.text_area("أضف الجمل (جملة | ترجمة | نطق):", height=150)
         
         if st.button("🚀 نشر بصوت رجل"):
             lines = bulk_text.strip().split('\n')
@@ -103,16 +100,24 @@ with st.sidebar:
                 if "|" in line:
                     parts = line.split("|")
                     eng, ar, pron = parts[0].strip(), parts[1].strip(), parts[2].strip()
-                    audio_path = f"audio/s_{len(sentences)}.mp3"
-                    # صوت الرجل Guy
+                    
+                    # اسم فريد لكل ملف صوتي لضمان عدم التكرار
+                    audio_id = f"v2_{len(sentences)}" 
+                    audio_path = f"audio/{audio_id}.mp3"
+                    
+                    # ✨ استخدام صوت الرجل الأمريكي الفخم (Guy)
                     os.system(f'edge-tts --text "{eng}" --voice "en-US-GuyNeural" --write-media "{audio_path}"')
-                    sentences.append({"english": eng, "arabic": ar, "pronunciation": pron, "audio": audio_path, "category": cat_input})
+                    
+                    sentences.append({
+                        "english": eng, "arabic": ar, "pronunciation": pron, 
+                        "audio": audio_path, "category": cat_input
+                    })
             save_data(sentences)
-            st.success("تم التحديث!")
+            st.success("تم الحفظ بنجاح!")
             st.rerun()
 
 # ==========================================
-# 5. عرض الموقع
+# 5. عرض الموقع للطلاب
 # ==========================================
 st.markdown("<h1 class='main-title'>🎓 منصة إتقان اللغة الإنجليزية</h1>", unsafe_allow_html=True)
 st.markdown(f"<p style='text-align:center; color:#888;'>القسم الحالي: {selected_category}</p>", unsafe_allow_html=True)
@@ -124,8 +129,10 @@ for item in filtered:
     <div class="sentence-card">
         <div class="eng-text">{item['english']}</div>
         <div class="ar-text">📖 {item['arabic']}</div>
-        <div class="pron-text">🗣️ النطق: {item['pronunciation']}</div>
+        <div class="pron-text">🗣️ نطق: {item['pronunciation']}</div>
     </div>
     """, unsafe_allow_html=True)
     if os.path.exists(item['audio']):
-        st.audio(item['audio'])
+        # قراءة الملف كبيانات لضمان عمله في الآيفون والإنترنت
+        with open(item['audio'], "rb") as f:
+            st.audio(f.read(), format="audio/mpeg")
