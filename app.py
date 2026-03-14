@@ -2,62 +2,40 @@ import streamlit as st
 import os
 import json
 
-# ==========================================
-# 1. إعدادات الصفحة الأساسية
-# ==========================================
-st.set_page_config(page_title="منصة إتقان الإنجليزية", page_icon="🎓", layout="centered")
+# 1. إعدادات الصفحة
+st.set_page_config(page_title="المنصة التعليمية", page_icon="🎓", layout="centered")
 
-# ==========================================
-# 2. تصميم احترافي (إخفاء القطة والشريط العلوي تماماً)
-# ==========================================
+# 2. تصميم "الإبادة" للأشرطة البيضاء والقطة
 st.markdown("""
 <style>
-    /* 🛑 إخفاء القطة وجميع أيقونات GitHub و Fork نهائياً */
-    header {visibility: hidden !important; height: 0px !important;}
-    [data-testid="stHeader"] {visibility: hidden !important; height: 0px !important;}
+    /* إخفاء كل شيء في الأعلى (القطة، الخطوط، Fork) */
+    header, [data-testid="stHeader"], .stAppHeader {display: none !important; visibility: hidden !important;}
     [data-testid="stDecoration"] {display: none !important;}
+    #MainMenu {visibility: hidden !important;}
     footer {visibility: hidden !important;}
     .stDeployButton {display: none !important;}
-    [data-testid="stToolbar"] {visibility: hidden !important;}
+    
+    /* رفع المحتوى للأعلى تماماً */
+    .block-container {padding-top: 0rem !important;}
 
-    /* ضبط المسافات لتبدأ من الأعلى */
-    .block-container {padding-top: 0rem !important; padding-bottom: 1rem !important;}
-
+    /* تصميم البطاقات - لون غامق فخم */
     @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap');
     * { font-family: 'Tajawal', sans-serif; }
-    
-    body { background-color: #0e1117; }
-    
     .sentence-card { 
-        direction: rtl; 
-        background-color: #1e1e1e; 
-        color: #ffffff; 
-        border-radius: 15px; 
-        padding: 20px; 
-        margin-bottom: 20px; 
-        box-shadow: 0 4px 15px rgba(0,0,0,0.5); 
-        border-right: 6px solid #4CAF50; 
-        text-align: right;
+        direction: rtl; background-color: #1e1e1e; color: #ffffff; 
+        border-radius: 15px; padding: 20px; margin-bottom: 20px; 
+        box-shadow: 0 4px 15px rgba(0,0,0,0.5); border-right: 6px solid #4CAF50; text-align: right;
     }
-    .eng-text { color: #64b5f6; font-size: 24px; font-weight: bold; direction: ltr; text-align: left; margin-bottom: 10px;}
-    .ar-text { color: #e0e0e0; font-size: 18px; margin-bottom: 8px;}
+    .eng-text { color: #64b5f6; font-size: 24px; font-weight: bold; direction: ltr; text-align: left; }
+    .ar-text { color: #e0e0e0; font-size: 18px; }
     .pron-text { color: #ffb74d; font-size: 16px; }
-    .main-title { color: #4CAF50; text-align: center; direction: rtl; font-size: 30px; font-weight: bold; padding-top: 20px;}
-    
-    /* جعل زر القائمة (الخطوط الثلاثة) ظاهراً بوضوح في الهاتف */
-    [data-testid="stSidebarCollapsedControl"] {
-        color: #4CAF50 !important;
-        background-color: rgba(76, 175, 80, 0.1) !important;
-        border-radius: 10px !important;
-        top: 15px !important;
-        left: 15px !important;
-    }
+
+    /* زر القائمة الجانبية للهواتف */
+    [data-testid="stSidebarCollapsedControl"] { color: #4CAF50 !important; top: 10px !important; }
 </style>
 """, unsafe_allow_html=True)
 
-# ==========================================
-# 3. إدارة البيانات والملفات
-# ==========================================
+# 3. إدارة البيانات
 if not os.path.exists("audio"): os.makedirs("audio")
 DATA_FILE = "sentences.json"
 
@@ -75,37 +53,31 @@ def save_data(data):
 sentences = load_data()
 all_categories = sorted(list(set([s.get("category", "عام") for s in sentences] + ["عام"])))
 
-# ==========================================
 # 4. القائمة الجانبية (الأقسام + لوحة الإدارة)
-# ==========================================
 with st.sidebar:
-    st.markdown("<h2 style='text-align: right; color:#4CAF50;'>📚 تصفح الأقسام</h2>", unsafe_allow_html=True)
-    # الطالب يختار من هنا (ستظهر له كـ 3 خطوط في الهاتف)
+    st.markdown("<h2 style='text-align: right;'>📚 الأقسام</h2>", unsafe_allow_html=True)
     selected_category = st.selectbox("اختر القسم:", all_categories)
     
     st.write("---")
     
-    # لوحة الإدارة (تظهر فقط عند إضافة ?admin=true للرابط)
+    # 🛑 تأكد أنك تستخدم رابط ينتهي بـ ?admin=true
     if st.query_params.get("admin") == "true":
-        st.markdown("<h3 style='color:#ffb74d; text-align:right;'>🛠 لوحة الإدارة</h3>", unsafe_allow_html=True)
+        st.error("🛠 لوحة الإدارة مفعلة")
         
-        # 🟢 حقل اسم القسم (المدرسة، البيت، إلخ)
-        cat_input = st.text_input("📂 اسم القسم الجديد:", "عام")
+        # 📂 مربع الأقسام (تأكد من كتابة اسم القسم هنا قبل الحفظ)
+        cat_input = st.text_input("📂 اكتب اسم القسم (المدرسة، البيت...):", "عام")
         
-        bulk_text = st.text_area("أضف الجمل (جملة | ترجمة | نطق):", height=150)
+        bulk_text = st.text_area("الجمل (جملة | ترجمة | نطق):", height=150)
         
-        if st.button("🚀 نشر بصوت رجل"):
+        if st.button("🚀 إضافة بصوت رجل"):
             lines = bulk_text.strip().split('\n')
             for line in lines:
                 if "|" in line:
                     parts = line.split("|")
                     eng, ar, pron = parts[0].strip(), parts[1].strip(), parts[2].strip()
                     
-                    # اسم فريد لكل ملف صوتي لضمان عدم التكرار
-                    audio_id = f"v2_{len(sentences)}" 
-                    audio_path = f"audio/{audio_id}.mp3"
-                    
-                    # ✨ استخدام صوت الرجل الأمريكي الفخم (Guy)
+                    audio_path = f"audio/m_{len(sentences)}.mp3"
+                    # صوت الرجل Guy (أمريكي)
                     os.system(f'edge-tts --text "{eng}" --voice "en-US-GuyNeural" --write-media "{audio_path}"')
                     
                     sentences.append({
@@ -113,17 +85,13 @@ with st.sidebar:
                         "audio": audio_path, "category": cat_input
                     })
             save_data(sentences)
-            st.success("تم الحفظ بنجاح!")
+            st.success("تم الحفظ!")
             st.rerun()
 
-# ==========================================
-# 5. عرض الموقع للطلاب
-# ==========================================
-st.markdown("<h1 class='main-title'>🎓 منصة إتقان اللغة الإنجليزية</h1>", unsafe_allow_html=True)
-st.markdown(f"<p style='text-align:center; color:#888;'>القسم الحالي: {selected_category}</p>", unsafe_allow_html=True)
+# 5. عرض الموقع
+st.markdown("<h1 style='text-align:center; color:#4CAF50;'>🎓 منصة إتقان الإنجليزية</h1>", unsafe_allow_html=True)
 
 filtered = [s for s in sentences if s.get("category", "عام") == selected_category]
-
 for item in filtered:
     st.markdown(f"""
     <div class="sentence-card">
@@ -133,6 +101,5 @@ for item in filtered:
     </div>
     """, unsafe_allow_html=True)
     if os.path.exists(item['audio']):
-        # قراءة الملف كبيانات لضمان عمله في الآيفون والإنترنت
         with open(item['audio'], "rb") as f:
             st.audio(f.read(), format="audio/mpeg")
