@@ -8,19 +8,21 @@ import json
 st.set_page_config(page_title="تعلم الإنجليزية بطلاقة", page_icon="🎓", layout="centered")
 
 # ==========================================
-# 2. قسم التصميم (إخفاء أيقونات القطة والعلامات المائية)
+# 2. قسم التصميم (إخفاء كل الأيقونات والعلامات المزعجة)
 # ==========================================
 st.markdown("""
 <style>
-    /* إخفاء أيقونة القطة (GitHub) والقائمة العلوية بالكامل */
+    /* إخفاء القائمة العلوية بالكامل (أيقونة جيت هاب وغيرها) */
     header {visibility: hidden;}
     
-    /* إخفاء علامة Streamlit البرتقالية من أسفل الموقع */
+    /* إخفاء علامة Streamlit من أسفل الموقع */
     footer {visibility: hidden;}
-    /* إخفاء الأزرار العائمة الخاصة بـ Streamlit من الأسفل والأعلى */
+    
+    /* إخفاء الأزرار العائمة (الزر الأحمر وصورتك الشخصية) */
     [data-testid="stToolbar"] {display: none !important;}
     [data-testid="stAppDeployButton"] {display: none !important;}
-    /* إخفاء الفراغ الأبيض الزائد من الأعلى بعد إخفاء القائمة */
+    
+    /* إخفاء الفراغ الأبيض الزائد من الأعلى */
     .block-container {padding-top: 2rem;}
 
     @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap');
